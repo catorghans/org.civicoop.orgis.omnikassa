@@ -112,14 +112,10 @@ class CRM_Core_Payment_Omnikassa extends CRM_Core_Payment{
       ));
     }
 
-/*    $returnOKURL = CRM_Utils_System::url($baseURL,array(
+    $returnOKURL = CRM_Utils_System::url($baseURL,array(
       '_qf_ThankYou_display' => 1,
        'qfKey' => $params['qfKey']
       ),
-      TRUE, NULL, FALSE
-    );*/
-    $returnOKURL = CRM_Utils_System::url($baseURL,
-      "_qf_ThankYou_display=1&qfKey={$params['qfKey']}",
       TRUE, NULL, FALSE
     );
     $returnUrl = CRM_Utils_System::url($baseURL,array(
@@ -176,7 +172,7 @@ class CRM_Core_Payment_Omnikassa extends CRM_Core_Payment{
       <input type="submit">
 </form>
 <script type="text/javascript">
-//document.forms['omnikassa'].submit();
+document.forms['omnikassa'].submit();
 </script>
 <?php
    
