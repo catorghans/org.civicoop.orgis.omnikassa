@@ -170,29 +170,6 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
       $this->omnikassa_receipt_exit(TRUE);
 
     }
-/*
-    //since we have done MAC validation we can assume it is all good & just use the api to complete
-    // based on the contribution id
-    $successfulResults = array('payetest', 'paiement');
-    $resultCode = $this->retrieve('code-retour', 'String');
-    $trxn_id = $this->retrieve('numauto', 'Integer');
-    $contributionID = $this->retrieve('reference', 'Integer');
-
-    if(in_array($resultCode, $successfulResults)) {
-      if($resultCode == 'payetest') {
-        $trxn_id = 'test' . $contributionID . uniqid();
-      }
-      civicrm_api3('contribution', 'completetransaction', array(
-        'id' => $contributionID,
-        'trxn_id' => $trxn_id,
-      ));
-      $this->cmcic_receipt_exit(TRUE);
-    }
-    elseif($resultCode == 'Annulation') {
-      $this->processFailedTransaction($contributionID);
-      $this->cmcic_receipt_exit(TRUE);
-    }*/
-
 
     return TRUE;
   }
@@ -203,7 +180,6 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
 * @param unknown $contributionID
 */
   function processFailedTransaction($contributionID) {
-    CRM_Core_Error::debug_log_message( "Omnikassa Process Failed Transaction - ContributionID:".$contributionID) ;
 
     $input = $ids = array();
     $contribution = new CRM_Contribute_BAO_Contribution();
@@ -213,7 +189,6 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
       throw new Exception('A valid contribution ID is required', 'invalid_data');
     }
     try {
-      CRM_Core_Error::debug_log_message( "Omnikassa Process Failed Transaction - Contribution found") ;
 
       if(!$contribution->loadRelatedObjects($input, $ids, FALSE, TRUE)){
         throw new Exception('failed to load related objects');
@@ -226,17 +201,12 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
       $input['is_test'] = $contribution->is_test;
       $input['amount'] = $contribution->total_amount;
       // @todo required for base ipn but problematic as api layer handles this
-      CRM_Core_Error::debug_log_message( "Omnikassa data found") ;
 
       $transaction = new CRM_Core_Transaction();
-        CRM_Core_Error::debug_log_message( "Omnikassa new transaction") ;
 
       $ipn = new CRM_Core_Payment_BaseIPN();
-        CRM_Core_Error::debug_log_message( "Omnikassa IPN created") ;
 
-//      $ipn->failed($input, $ids, $objects, $transaction);
       $ipn->failed($objects, $transaction, $input);
-        CRM_Core_Error::debug_log_message( "Omnikassa IPN->Failed called") ;
 
     }
     catch (Exception $e) {
