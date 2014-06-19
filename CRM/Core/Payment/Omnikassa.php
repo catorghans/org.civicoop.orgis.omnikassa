@@ -90,50 +90,54 @@ class CRM_Core_Payment_Omnikassa extends CRM_Core_Payment{
 *
 */
   function doTransferCheckout(&$params, $component) {
+
+/*    if ($component == 'contribute') {
+      $this->data['returnUrl'] = CRM_Utils_System::baseCMSURL() . "civicrm/payment/ipn?processor_name=Zaakpay&md=contribute&qfKey=" . $params['qfKey'] . '&inId=' . $par
+ams['invoiceID'];
+    }
+    else if ($component == 'event') {
+      $this->data['returnUrl'] = CRM_Utils_System::baseCMSURL() . "civicrm/payment/ipn?processor_name=Zaakpay&md=event&qfKey=" . $params['qfKey'] . '&pid=' . $params['p
+articipantID'] . "&eid=" . $params['eventID'] . "&inId=" . $params['invoiceID'];
+    } */
+
+    $baseURL = 'civicrm/payment/ipn';
+
     $component = strtolower($component);
+
+
     if ($component == 'event') {
-      $baseURL = 'civicrm/event/register';
-      $cancelURL = urlencode(CRM_Utils_System::url($baseURL, array(
-        'reset' => 1,
-        'cc' => 'fail',
+//      $baseURL = 'civicrm/event/register';
+      $returnURL = CRM_Utils_System::url($baseURL,array(
+        'md' => $component,
+        'qfKey' => $params['qfKey'],
+        'processor_id' => $params['payment_processor_id'],
+        'mode' => $this->_mode,
         'participantId' => $orderID[4],
-      ),
-      TRUE, NULL, FALSE
-      ));
+       ),
+       TRUE, NULL, FALSE
+      );
     }
     elseif ($component == 'contribute') {
-      $baseURL = 'civicrm/contribute/transact';
-      $cancelURL = urlencode(CRM_Utils_System::url($baseURL, array(
-        '_qf_Main_display' => 1,
+//      $baseURL = 'civicrm/contribute/transact';
+      $returnURL = CRM_Utils_System::url($baseURL,array(
+        'md' => $component,
         'qfKey' => $params['qfKey'],
-        'cancel' => 1,
-        ),
-        TRUE, NULL, FALSE
-      ));
+        'processor_id' => $params['payment_processor_id'],
+        'mode' => $this->_mode,
+       ),
+       TRUE, NULL, FALSE
+      );
     }
 
-    $returnOKURL = CRM_Utils_System::url($baseURL,array(
-      '_qf_ThankYou_display' => 1,
-       'qfKey' => $params['qfKey']
-      ),
-      TRUE, NULL, FALSE
-    );
-    $returnUrl = CRM_Utils_System::url($baseURL,array(
-      '_qf_Confirm_display' => 'true',
-       'qfKey' => $params['qfKey']
-      ),
-      TRUE, NULL, FALSE
-    );
- 
-   $notificationUrl = CRM_Utils_System::url('civicrm/payment/ipn', array(
+    $notificationUrl = CRM_Utils_System::url($baseURL, array(
        'processor_id' => $params['payment_processor_id'],
        'mode' => $this->_mode,
        ), TRUE, NULL, FALSE
-     );
+    );
    
     $config = CRM_Core_Config::singleton();
-  CRM_Core_Error::debug_log_message( "Omnikassa mode='".$this->_mode."' Params array ".print_r($params,true) );
-  CRM_Core_Error::debug_log_message( "Omnikassa config array ".print_r($config,true) );
+    CRM_Core_Error::debug_log_message( "Omnikassa mode='".$this->_mode."' Params array ".print_r($params,true) );
+    CRM_Core_Error::debug_log_message( "Omnikassa config array ".print_r($config,true) );
 
     list($currencynumber, $fraction_unit) = $this->getCurrency($params['currencyID']);    
  
@@ -147,7 +151,7 @@ class CRM_Core_Payment_Omnikassa extends CRM_Core_Payment{
     $Omniparams['keyVersion']=1;
     $Omniparams['customerLanguage']=$this->getLanguage();
     $Omniparams['currencyCode']=$currencynumber;
-    $Omniparams['normalReturnUrl']=$returnOKURL;
+    $Omniparams['normalReturnUrl']=$returnURL;
     $Omniparams['automaticResponseUrl']=$notificationUrl;
     $Omniparams['expirationDate'] =  date('c', time() + 7200); // verloopt na 2 uur
 
@@ -343,27 +347,7 @@ PRIMARY KEY (`id`)
         return true;   
 
     }
-    public function parseRequest($data, $seal, $callback=false) {
-        $logtxt = $callback ? "Rabobank callback" : "User returned";
 
-        $sealcheck = hash('sha256', utf8_encode($data . $this->_paymentProcessor['password']));
-        if ($seal != $sealcheck) {
-//            $this->log("warning", $logtxt . ", seal check failed.");
-            return false;
-        }
-
-        $return = array();
-        $data = explode("|", $data);
-        foreach ($data as $datapart) {
-            list($key, $value) = explode("=", $datapart);
-            if($key=='transactionReference')
-                $value = substr($value, 0, strrpos($value,'t'));
-            $return[$key] = $value;
-        }
-
-//        $this->log("info", $logtxt . ", " . ($return['responseCode']=='00' ? "SUCCESS" : "FAIL") . ", order " . $return['transactionReference'] . ", payment type " . ($return['paymentMeanBrand']?$return['paymentMeanBrand']:'unknown') . ", response code " . $return['responseCode']);
-        return $return;
-    }
     function getErrorDescription($code) {
         switch ($code) {
             case 00:

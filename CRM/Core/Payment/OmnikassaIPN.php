@@ -40,7 +40,7 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
 * @return string
 */
   function omnikassa_receipt($mac_ok) {
-    return "version=2\ncdr=" . ($mac_ok ? '0' : '1') . "\n";
+//    return "version=2\ncdr=" . ($mac_ok ? '0' : '1') . "\n";
   }
 
   /**
@@ -151,6 +151,7 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
     $resultCode = $this->retrieveData("responseCode", "String");
     $trxn_id = $this->retrieveData("transactionReference", "String");
     $contributionID = $this->retrieveData("orderId", "Integer");
+    $success=false;
 
     if ($resultCode == "00")
     {
@@ -160,14 +161,59 @@ class CRM_Core_Payment_OmnikassaIPN extends CRM_Core_Payment_BaseIPN{
         'id' => $contributionID,
         'trxn_id' => $trxn_id,
       ));
-      $this->omnikassa_receipt_exit(TRUE);
+  //    $this->omnikassa_receipt_exit(TRUE);
+      $success=true;
+
     }
     else
     {
       CRM_Core_Error::debug_log_message( "Omnikassa IPN main() function: RESULT FAILED:".$resultCode) ;
 
       $this->processFailedTransaction($contributionID);
-      $this->omnikassa_receipt_exit(TRUE);
+ //     $this->omnikassa_receipt_exit(TRUE);
+
+    }
+   
+    if (isset($_REQUEST["md"]) && isset($_REQUEST["qfKey"])){
+      $module = $_REQUEST["md"];
+      $qfKey = $_REQUEST["qfKey"];
+      $invoiceId = $_REQUEST["inId"];
+      switch ($module) {
+        case 'contribute':
+          if ($success){
+            $url = CRM_Utils_System::url('civicrm/contribute/transact', "_qf_ThankYou_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE
+            );
+          }
+          else {
+            $error=$this->_paymentProcessor->getErrorDescription($resultCode);
+            CRM_Core_Session::setStatus($error, ts('Error:'), 'error');
+            $url = CRM_Utils_System::url('civicrm/contribute/transact', "_qf_Confirm_display=true&qfKey={$qfKey}", FALSE, NULL, FALSE
+            );
+
+          }
+
+          break;
+        case 'event':
+          if ($success){
+ 
+            $url = CRM_Utils_System::url('civicrm/event/register', "_qf_ThankYou_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE
+            );
+          }
+          else
+          {
+            $error=$this->_paymentProcessor->getErrorDescription($resultCode);
+
+            CRM_Core_Session::setStatus($error, ts('Error:'), 'error');
+            $url = CRM_Utils_System::url('civicrm/event/register', "_qf_Confirm_display=true&qfKey={$qfKey}", FALSE, NULL, FALSE
+          );
+
+
+          } 
+          break;
+
+     }
+        CRM_Utils_System::redirect($url);     
+
 
     }
 
